@@ -2,7 +2,7 @@
 
 **Date:** 2025-02  
 **Reviewer:** Staff+ SRE (Head of Platform)  
-**Repo:** arkiv-platform-reference / arkiv-sre-blueprint
+**Repo:** arkiv-sre-blueprint
 
 ---
 
@@ -10,19 +10,17 @@
 
 This repo proves:
 
-1. **GitOps + K8s:** Argo CD ApplicationSet (`infra/k8s/argocd/application-set.yaml`) deploys secrets (KSOPS), observability (kube-prometheus-stack), ingress, blockscout, arkiv-ingestion. Standalone Application (`application-faucet.yaml`) enables gameday overlay switching. `make up` creates kind cluster, installs Argo CD, bootstraps apps.
+1. **GitOps + K8s + Observability/SLOs:** Argo CD ApplicationSet deploys secrets (KSOPS), observability (kube-prometheus-stack), ingress, blockscout, arkiv-ingestion. Standalone Application (`application-faucet.yaml`) enables gameday overlay switching. SLO burn-rate alerts for Faucet, Blockscout, Ingestion; Grafana dashboards; runbooks linked from alerts.
 
-2. **Observability/SLOs:** kube-prometheus-stack with SLO burn-rate alerts (Faucet, Blockscout, Ingestion), Grafana dashboards (slo-dashboard, app-overview, cluster-overview), runbooks linked from alerts.
+2. **Blockscout + onboarding + partner pilot:** Blockscout Helm app with persistence, prometheus.enabled, ServiceMonitor. Partner-pilot Docker Compose for arkiv-ingestion standalone. `docs/security/secrets.md`, `docs/operations/blockscout.md` for onboarding.
 
-3. **Blockscout, onboarding, partner pilot, incident response:** Blockscout Helm app with persistence; partner-pilot Docker Compose; `docs/incident-response.md` + runbooks; gameday scenario (GitOps-native) + postmortem template.
+3. **Incident response:** GameDay scenarios (GitOps-native), postmortem template, 9 runbooks (Faucet, Blockscout, Ingestion, infra).
 
 ---
 
 ## B) Reproducibility Checks
 
-### Fresh machine path
-
-**Exact commands from zero → running:**
+### Fresh machine path (exact commands)
 
 ```bash
 # 1. Install tools (macOS)
@@ -30,7 +28,7 @@ brew install kind kubectl make sops age
 # Docker Desktop required for kind and image builds
 
 # 2. Clone and cd
-git clone <repo-url> && cd <repo-dir>
+git clone https://github.com/vadym-shukurov/arkiv-sre-blueprint && cd arkiv-sre-blueprint
 
 # 3. Edit secrets: replace CHANGE_ME in infra/k8s/secrets/dev/*.secret.yaml.example
 #    Use admin/postgres for local dev (docs/security/secrets.md)
@@ -38,37 +36,34 @@ git clone <repo-url> && cd <repo-dir>
 # 4. Generate age key and encrypt
 make secrets-init
 
-# 5. Commit encrypted secrets (required for Argo sync)
-git add infra/k8s/secrets/dev/*.enc.yaml
-git commit -m "Add encrypted secrets" || true
-
-# 6. Export key and push to Git remote (REPO_URL must be reachable by Argo)
+# 5. Export key and commit enc.yaml (required for Argo sync)
 export SOPS_AGE_KEY=$(cat infra/k8s/secrets/dev/age.agekey)
-git push <remote> main
+git add infra/k8s/secrets/dev/*.enc.yaml && git commit -m "Add encrypted secrets" || true
+git push origin main
 
-# 7. Bring up cluster
+# 6. Bring up cluster
 make up
 
-# 8. Build app images (required for faucet + arkiv-ingestion to become Healthy)
+# 7. Build app images (required for faucet + arkiv-ingestion to become Healthy)
 make faucet-build
 make ingestion-build
 
-# 9. Verify
+# 8. Verify
 make status
 make port-forward
 ```
 
 | Check | PASS/FAIL | Evidence |
 |-------|-----------|----------|
-| `make up` | PASS | Makefile L24-26: up → create-cluster, configure-argocd-ksops, bootstrap. Precondition: `grafana-admin.enc.yaml` exists (L54). |
+| `make up` | PASS | Makefile L24-26: up → create-cluster, configure-argocd-ksops, bootstrap. Precondition: `grafana-admin.enc.yaml` exists (L53). |
 | `make down` | PASS | Makefile L76-77: `kind delete cluster` |
 | `make status` | PASS | L79-83: kind clusters, Argo apps, pods |
 | `make logs` | PASS | L84-85: `kubectl logs` with COMPONENT=server\|repo-server |
 | Argo apps Healthy/Synced | PASS | wait-sync L66-74: loops until synced/healthy ≥ total |
-| Port-forward URLs | PASS | README L48-51: Grafana 3000, blockscout 8080, faucet 8081, ingestion 8082 |
-| Creds (Argo password) | PASS | README L39-40: `kubectl -n argocd get secret argocd-initial-admin-secret ...` |
+| Port-forward URLs | PASS | README L52-56: Grafana 3000, blockscout 8080, faucet 8081, ingestion 8082 |
+| Argo CD password | PASS | README L43-46: `kubectl -n argocd get secret argocd-initial-admin-secret ...` |
 
-**FAIL:** README Quickstart L22-31 omits (a) `export SOPS_AGE_KEY` before `make up`, (b) commit enc.yaml before push. Bootstrap requires grafana-admin.enc.yaml; Argo secrets app requires *.enc.yaml in repo. **P1.**
+**FAIL:** `docs/security/secrets.md` L5-15 does not mention "commit and push *.enc.yaml before make up". Argo secrets app syncs from repo; enc.yaml must be committed. **P1.**
 
 **WARN:** `wait-sync` may timeout (10×15s) if faucet/arkiv-ingestion stay Degraded (images not built). Bootstrap runs before build in Quickstart order.
 
@@ -83,7 +78,7 @@ make port-forward
 | RBAC least privilege | PASS | Dedicated SAs: faucet-sa, arkiv-ingestion-sa, arkiv-ingestion-db-sa, loadgen-faucet-sa; automountServiceAccountToken: false. `docs/security/rbac.md` |
 | Network exposure | PASS | Services ClusterIP; ingress controller hostPort for kind |
 
-**Gap:** `*.enc.yaml` not in repo by default. User must run `make secrets-init` and commit enc.yaml. `docs/security/secrets.md` L17 mentions "commit *.enc.yaml" but README does not.
+**Gap:** `*.enc.yaml` not in repo by default. User must run `make secrets-init` and commit enc.yaml. `docs/security/secrets.md` L17 mentions "commit *.enc.yaml" for rotation but not in initial path.
 
 ---
 
@@ -93,11 +88,11 @@ make port-forward
 
 | SLO | Target | Defined in |
 |-----|--------|------------|
-| Faucet availability | ≥ 99.9% | `infra/k8s/monitoring/values.yaml` L29-56, `docs/slos.md` |
-| Faucet p95 latency | < 2s | values.yaml L66-74 |
-| Ingestion availability | ≥ 99.9% | values.yaml L88-96 |
-| Blockscout availability | ≥ 99.9% | values.yaml L110-156, docs/slos.md |
-| Node readiness | 100% | values.yaml L162-169 |
+| Faucet availability | ≥ 99.9% | `infra/k8s/monitoring/values.yaml` L29-86, `docs/slos.md` |
+| Faucet p95 latency | < 2s | values.yaml L69-76 |
+| Ingestion availability | ≥ 99.9% | values.yaml L86-111 |
+| Blockscout availability | ≥ 99.9% | values.yaml L111-164, docs/slos.md |
+| Node readiness | 100% | values.yaml L163-169 |
 
 ### Burn-rate alerts
 
@@ -120,7 +115,7 @@ make port-forward
 
 All 9 runbooks exist: FaucetSLOBurnRateFast/Slow, FaucetHighLatency, FaucetRateLimitSpike, IngestionHighErrorRate, BlockscoutHighErrorRate, NodeNotReady, HighPodRestartRate, PrometheusDown.
 
-**Gap:** `runbook_url` hardcoded to `https://github.com/arkiv/arkiv-platform-reference`. If forked, links 404. **P1.**
+**Runbook verification:** `docs/runbooks/FaucetSLOBurnRateFast.md` contains actionable commands (kubectl get pods, logs, port-forward, make gameday-off, rollout restart). **PASS.**
 
 ---
 
@@ -130,20 +125,22 @@ All 9 runbooks exist: FaucetSLOBurnRateFast/Slow, FaucetHighLatency, FaucetRateL
 
 | Check | PASS/FAIL | Evidence |
 |-------|-----------|----------|
-| /healthz | PASS | `apps/faucet/main.go` L175-183, deployment.yaml L32-42 |
-| /metrics | PASS | main.go L119, ServiceMonitor L61-72 |
-| Rate limit | PASS | perIPLimit=10, perAddrLimit=2 (main.go L19-23); faucet_rate_limit_total |
+| /healthz | PASS | `apps/faucet/main.go` L175-184, deployment.yaml L34-41 |
+| /metrics | PASS | main.go L119, ServiceMonitor L61-72 in deployment.yaml |
+| Rate limit | PASS | perIPLimit=10, perAddrLimit=2 (main.go L19-25); faucet_rate_limit_total |
 | Liveness/readiness | PASS | deployment.yaml L33-42 |
+| Request body limit | PASS | main.go L220: MaxBytesReader(64KB), 413 on overflow |
 
 ### Ingestion
 
 | Check | PASS/FAIL | Evidence |
 |-------|-----------|----------|
 | Idempotency | PASS | `ingester_postgres.go` L46-49: ON CONFLICT (idempotency_key) DO NOTHING |
-| Retries/backoff | PASS | `main.go` L107-123: 3 attempts, exponential backoff |
+| Retries/backoff | PASS | `main.go` L123-137: 3 attempts, 1s/2s/3s backoff |
 | Config | PASS | DATABASE_URL, INGEST_INTERVAL_SEC, CHAIN_ID from env |
 | Demo mode | PASS | `fetcher_synthetic.go`: synthetic blocks |
 | Liveness/readiness | PASS | deployment.yaml L41-51 |
+| Graceful shutdown | PASS | main.go L71-88: http.Server.Shutdown on SIGTERM/SIGINT |
 
 ### Blockscout
 
@@ -152,7 +149,8 @@ All 9 runbooks exist: FaucetSLOBurnRateFast/Slow, FaucetHighLatency, FaucetRateL
 | Persistence | PASS | values.yaml L24-27: persistence.enabled: true, 10Gi |
 | Resources | PASS | L27-34, L71-76 |
 | Prometheus | PASS | values.yaml L38: prometheus.enabled: true |
-| Operational docs | PASS | `docs/operations/blockscout.md` |
+| ServiceMonitor | PASS | blockscout-stack chart creates ServiceMonitor; kube-prometheus-stack serviceMonitorNamespaceSelector discovers blockscout |
+| Operational docs | PASS | `docs/operations/blockscout.md`, `docs/BLOCKSCOUT-OBSERVABILITY.md` |
 
 **Gap:** `arkiv-ingestion-db` uses emptyDir (deployment.yaml L123-124). Comment: "demo only; data lost on pod restart."
 
@@ -167,8 +165,6 @@ All 9 runbooks exist: FaucetSLOBurnRateFast/Slow, FaucetHighLatency, FaucetRateL
 | Postmortem template | PASS | `gameday/templates/postmortem.md` |
 | Example filled | PASS | `gameday/postmortems/faucet-error-spike-sample.md` |
 
-**Evidence:** `kubectl kustomize gameday/overlays/01-faucet-error-spike` — overlay includes loadgen-pod.yaml.
-
 ---
 
 ## G) CI Checks
@@ -177,15 +173,15 @@ All 9 runbooks exist: FaucetSLOBurnRateFast/Slow, FaucetHighLatency, FaucetRateL
 |------|-----------|----------|
 | Secret scan (gitleaks) | PASS | `.github/workflows/ci.yml` L18-21 |
 | YAML lint | PASS | L23-26, `.yamllint` |
-| Kubeconform | PASS | L28-34 |
-| Kustomize build | PASS | L34-35 |
+| Kubeconform | PASS | L28-34 (faucet app only; ApplicationSet skipped due to Go templates) |
+| Kustomize build | PASS | L35-36 |
 | Helm lint | PASS | L37-41 |
 | Docker build | PASS | L43-55 |
 | Go vet/test | PASS | L57-64 |
 
 **Triggers:** push/PR to main, master; workflow_dispatch.
 
-**Missing (high value):** Terraform fmt/validate (N/A — no Terraform). Consider: ApplicationSet dry-run sync, Prometheus rule validation.
+**Missing (high value):** ApplicationSet dry-run sync, Prometheus rule validation. Terraform N/A (no Terraform).
 
 ---
 
@@ -197,19 +193,18 @@ None.
 
 ### P1
 
-1. **README Quickstart: SOPS_AGE_KEY and enc.yaml**
-   - **File:** `README.md`
-   - **Change:** Add after `make secrets-init`:
+1. **docs/security/secrets.md — Commit enc.yaml before make up**
+   - **File:** `docs/security/secrets.md`
+   - **Change:** In "Main path: K8s" section, add step between secrets-init and make up:
      ```bash
-     export SOPS_AGE_KEY=$(cat infra/k8s/secrets/dev/age.agekey)
-     # Commit enc.yaml before push (Argo syncs secrets from repo)
      git add infra/k8s/secrets/dev/*.enc.yaml && git commit -m "Add encrypted secrets" || true
+     git push origin main  # Argo syncs secrets from repo
      ```
-   - **Evidence:** Bootstrap requires grafana-admin.enc.yaml; Argo secrets app requires *.enc.yaml in repo path.
+   - **Evidence:** Argo secrets app path `infra/k8s/secrets/dev`; enc.yaml must be in repo for sync.
 
 2. **runbook_url for forks**
    - **File:** `README.md` (REPO_URL section)
-   - **Change:** Already documents "If forked, update runbook_url... grep for arkiv-platform-reference." — verify prominenence.
+   - **Change:** Already documents "If forked, update runbook_url... grep for arkiv-platform-reference." — verify prominence. Runbook URLs point to vadym-shukurov/arkiv-sre-blueprint; forks need to update.
 
 ### P2
 
@@ -226,14 +221,15 @@ None.
 
 **Verdict: GO**
 
-No P0 blockers. Repo delivers GitOps, K8s, observability, SLO burn-rate alerts, runbooks, gameday. P1 fixes improve reproducibility (SOPS_AGE_KEY, enc.yaml commit); recommended before release.
+No P0 blockers. Repo delivers GitOps, K8s, observability, SLO burn-rate alerts, runbooks, gameday. P1 fixes improve reproducibility (secrets doc commit step); recommended before release.
 
 ---
 
-## Evidence Screenshots (add to README)
+## Evidence Screenshots (min. 5 for README)
 
 1. **Argo CD UI** — Applications list: all apps Synced (green), Health Healthy (green). URL: https://localhost:8080 (after `make port-forward`).
 2. **Grafana SLO Dashboard** — Panels: Faucet error budget remaining, Faucet burn rate (5m/1h), Blockscout burn rate. URL: http://localhost:3000 → SLO Dashboard.
-3. **Prometheus Alerts** — Firing or Pending with runbook_url. URL: http://localhost:9090/alerts (port-forward to Prometheus).
+3. **Prometheus Alerts** — Firing or Pending with runbook_url. Port-forward: `kubectl port-forward -n monitoring svc/observability-kube-prometheus-prometheus 9090:9090` → http://localhost:9090/alerts.
 4. **Faucet health** — Terminal: `curl -s http://localhost:8081/healthz` → `ok`.
-5. **GameDay recovery** — Grafana: burn rate > 14.4 (gameday-on) vs < 14.4 (gameday-off). Or Prometheus: alert Firing → Resolved.
+5. **Prometheus Targets** — Blockscout target UP. URL: http://localhost:9090/targets → filter "blockscout".
+6. **GameDay recovery** — Grafana: burn rate > 14.4 (gameday-on) vs < 14.4 (gameday-off). Or Prometheus: alert Firing → Resolved.

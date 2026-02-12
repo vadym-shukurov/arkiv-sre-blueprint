@@ -1,8 +1,10 @@
 // Faucet: HTTP API for test tokens. Rate-limited by IP and address.
+// Endpoints: POST /faucet (JSON body: address), GET /healthz, GET /metrics.
 package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -216,9 +218,15 @@ func handleFaucet(limiter *rateLimiter) http.HandlerFunc {
 			http.Error(w, `{"error":"rate limit exceeded (IP)"}`, http.StatusTooManyRequests)
 			return
 		}
+		const maxBodyBytes = 64 * 1024 // 64KB; prevents DoS from huge JSON
 		var req FaucetRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes)).Decode(&req); err != nil {
 			slog.Warn("invalid body", "err", err)
+			var maxErr *http.MaxBytesError
+			if errors.As(err, &maxErr) {
+				http.Error(w, `{"error":"body too large"}`, http.StatusRequestEntityTooLarge)
+				return
+			}
 			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
 			return
 		}
@@ -233,15 +241,16 @@ func handleFaucet(limiter *rateLimiter) http.HandlerFunc {
 			http.Error(w, `{"error":"rate limit exceeded (address)"}`, http.StatusTooManyRequests)
 			return
 		}
+		resp := map[string]string{"status": "ok", "address": addr, "tx_hash": "0xstub"}
+		body, err := json.Marshal(resp)
+		if err != nil {
+			slog.Error("encode response", "err", err)
+			http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]string{
-			"status":  "ok",
-			"address": addr,
-			"tx_hash": "0x" + "stub",
-		}); err != nil {
-			slog.Warn("encode response", "err", err)
-		}
+		w.Write(body)
 		slog.Info("faucet request", "address", addr, "ip", ip)
 	}
 }

@@ -6,6 +6,9 @@ kube-prometheus-stack:
     prometheusSpec:
       storageSpec: {}
       retention: 15d
+      # Discover ServiceMonitors from blockscout, faucet, arkiv-ingestion namespaces
+      serviceMonitorSelectorNilUsesHelmValues: false
+      serviceMonitorNamespaceSelector: {}
   grafana:
     persistence:
       enabled: false

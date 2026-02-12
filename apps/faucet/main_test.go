@@ -183,4 +183,15 @@ func TestHandleFaucet(t *testing.T) {
 			t.Errorf("FORCE_ERROR_RATE=1.0 = %d, want 500", rec.Code)
 		}
 	})
+
+	t.Run("body too large", func(t *testing.T) {
+		largeBody := strings.Repeat("x", 65*1024) // 65KB exceeds 64KB limit
+		req := httptest.NewRequest(http.MethodPost, "/faucet", strings.NewReader(largeBody))
+		req.RemoteAddr = "7.7.7.7:1234"
+		rec := httptest.NewRecorder()
+		handler(rec, req)
+		if rec.Code != http.StatusRequestEntityTooLarge {
+			t.Errorf("body too large = %d, want 413", rec.Code)
+		}
+	})
 }

@@ -107,7 +107,7 @@ Placeholders (`REDACTED`, `CHANGE_ME`) are allowlisted in `.gitleaks.toml`. See 
 
 Audit: [docs/RELEASE-CANDIDATE-AUDIT.md](docs/RELEASE-CANDIDATE-AUDIT.md) | [docs/PRODUCTION-READINESS-AUDIT.md](docs/PRODUCTION-READINESS-AUDIT.md) | QE: [docs/RELEASE-CANDIDATE-QE.md](docs/RELEASE-CANDIDATE-QE.md)
 
-**Evidence screenshots:** (1) Argo CD UI — all apps Synced/Healthy; (2) Grafana SLO Dashboard — Faucet burn rate panels; (3) Prometheus Alerts with runbook links; (4) `curl localhost:8081/healthz` → ok; (5) GameDay: burn rate before/after gameday-off.
+**Evidence screenshots:** (1) Argo CD UI — all apps Synced/Healthy; (2) Grafana SLO Dashboard — Faucet burn rate panels; (3) Prometheus Alerts with runbook links; (4) `curl localhost:8081/healthz` → ok; (5) GameDay: burn rate before/after gameday-off; (6) Prometheus Targets showing Blockscout target UP.
 
 ## License
 

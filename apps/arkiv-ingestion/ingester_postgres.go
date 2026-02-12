@@ -8,8 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// postgresIngester writes to ingestion_records.
-// Uses ON CONFLICT (idempotency_key) DO NOTHING for idempotency and deduplication.
+// postgresIngester writes to ingestion_records. ON CONFLICT DO NOTHING ensures idempotency.
 type postgresIngester struct {
 	pool *pgxpool.Pool
 }

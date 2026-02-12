@@ -8,6 +8,7 @@ import (
 )
 
 // syntheticFetcher generates fake blocks for demo/testing. No external RPC calls.
+// IdempotencyKey format: {chainID}-{blockNum}.
 type syntheticFetcher struct {
 	chainID   string
 	nextBlock uint64

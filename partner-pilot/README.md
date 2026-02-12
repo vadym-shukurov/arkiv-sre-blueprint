@@ -1,6 +1,6 @@
 # Partner Pilot
 
-Demo: synthetic data → Postgres every 10s.
+Demo: synthetic data → Postgres (default 30s interval).
 
 ## Setup
 

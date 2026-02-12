@@ -10,6 +10,8 @@ Template files use placeholders (`CHANGE_ME`, `REDACTED`). Do not commit real se
 ```bash
 make secrets-init
 export SOPS_AGE_KEY=$(cat infra/k8s/secrets/dev/age.agekey)
+git add infra/k8s/secrets/dev/*.enc.yaml && git commit -m "Add encrypted secrets" || true
+git push origin main   # Argo syncs secrets from repo
 make up
 ```
 
