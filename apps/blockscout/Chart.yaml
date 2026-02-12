@@ -3,7 +3,7 @@ name: blockscout
 version: 0.1.0
 dependencies:
   - name: postgresql
-    version: "15.3.12"
+    version: "15.5.11"
     repository: https://charts.bitnami.com/bitnami
   - name: blockscout-stack
     version: "4.3.1"
