@@ -14,7 +14,7 @@ brew install kind kubectl make sops age
 # For make ci-local: brew install yamllint kubeconform gitleaks helm
 ```
 
-**CI:** `make ci-local` (requires yamllint, kubeconform, helm, go, gitleaks). Run manually: Actions → CI → Run workflow.
+**CI:** `make ci-local` (requires yamllint, kubeconform, helm, go, gitleaks). Runs on PR/push; you can also run manually via workflow_dispatch.
 
 ## Quickstart
 
