@@ -185,7 +185,8 @@ func TestHandleFaucet(t *testing.T) {
 	})
 
 	t.Run("body too large", func(t *testing.T) {
-		largeBody := strings.Repeat("x", 65*1024) // 65KB exceeds 64KB limit
+		// Valid JSON that exceeds 64KB so decoder hits MaxBytesReader limit (not parse error)
+		largeBody := `{"address":"0x` + strings.Repeat("a", 65*1024-18) + `"}`
 		req := httptest.NewRequest(http.MethodPost, "/faucet", strings.NewReader(largeBody))
 		req.RemoteAddr = "7.7.7.7:1234"
 		rec := httptest.NewRecorder()
