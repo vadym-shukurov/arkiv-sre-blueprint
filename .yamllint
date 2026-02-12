@@ -4,9 +4,11 @@ rules:
     max: 160
     allow-non-breakable-inline-mappings: true
   document-start: disable
+  truthy: disable  # GitHub Actions uses "on" as workflow trigger key
 ignore:
   - "*.json"
   - "*.enc.yaml"
   - "node_modules"
   - ".git"
   - "**/templates/*.yaml"
+  - "infra/k8s/argocd/application-set.yaml"  # ArgoCD ApplicationSet uses Go template syntax
