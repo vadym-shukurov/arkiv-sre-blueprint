@@ -1,0 +1,10 @@
+apiVersion: v2
+name: blockscout
+version: 0.1.0
+dependencies:
+  - name: postgresql
+    version: "15.3.12"
+    repository: https://charts.bitnami.com/bitnami
+  - name: blockscout-stack
+    version: "4.3.1"
+    repository: https://blockscout.github.io/helm-charts

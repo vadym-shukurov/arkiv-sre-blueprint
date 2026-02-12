@@ -1,0 +1,16 @@
+# Gitleaks config: extends default rules, allows placeholder values (REDACTED, CHANGE_ME).
+title = "arkiv-platform"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow placeholder values in template files and test fixtures"
+stopwords = [
+  "REDACTED",
+  "CHANGE_ME",
+]
+# Test fixtures (e.g. postgres://a:b@c/d) are not real credentials
+paths = [
+  ".*_test\\.go$",
+]

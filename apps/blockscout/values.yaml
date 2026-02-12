@@ -1,0 +1,127 @@
+# arkiv-platform-reference — Blockscout + Postgres
+# Chain indexing stubbed locally; use public RPC for demo
+
+global:
+  postgresql:
+    auth:
+      username: postgres
+      existingSecret: blockscout-postgresql
+      secretKeys:
+        userPasswordKey: password
+      database: blockscout
+
+postgresql:
+  serviceAccount:
+    create: true
+    name: blockscout-db-sa
+    automountServiceAccountToken: false
+  auth:
+    username: postgres
+    existingSecret: blockscout-postgresql
+    secretKeys:
+      userPasswordKey: password
+    database: blockscout
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+blockscout-stack:
+  config:
+    prometheus:
+      enabled: true
+      # Blackbox requires ingress; we use direct ServiceMonitor scrape of /metrics
+      blackbox:
+        enabled: false
+      rules:
+        enabled: true
+        healthyBlockPeriod: 300
+        batchTimeMultiplier: 2
+  blockscout:
+    serviceAccount:
+      create: true
+      name: blockscout-sa
+      automountServiceAccountToken: false
+    replicaCount: 1
+    env:
+      - name: DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: blockscout-postgresql
+            key: datasource-url
+      - name: ETHEREUM_JSONRPC_HTTP_URL
+        value: "https://eth.llamarpc.com"
+      - name: ETHEREUM_JSONRPC_VARIANT
+        value: "geth"
+      - name: ETHEREUM_JSONRPC_TRACE_URL
+        value: "https://eth.llamarpc.com"
+      - name: SECRET_KEY_BASE
+        valueFrom:
+          secretKeyRef:
+            name: blockscout-app
+            key: SECRET_KEY_BASE
+      - name: ECTO_USE_SSL_PORT
+        value: "false"
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 2Gi
+        cpu: 2
+    livenessProbe:
+      enabled: true
+      path: /api/health/liveness
+      params:
+        initialDelaySeconds: 120
+        periodSeconds: 30
+        timeoutSeconds: 10
+    readinessProbe:
+      enabled: true
+      path: /api/health/readiness
+      params:
+        initialDelaySeconds: 90
+        periodSeconds: 10
+        timeoutSeconds: 30
+    service:
+      type: ClusterIP
+      port: 80
+    ingress:
+      enabled: false
+  frontend:
+    serviceAccount:
+      create: true
+      name: blockscout-frontend-sa
+      automountServiceAccountToken: false
+    enabled: true
+    replicaCount: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 125m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    livenessProbe:
+      enabled: true
+      path: /api/healthz
+      params:
+        initialDelaySeconds: 60
+        periodSeconds: 30
+    readinessProbe:
+      enabled: true
+      path: /api/healthz
+      params:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+    ingress:
+      enabled: false
+  stats:
+    enabled: false

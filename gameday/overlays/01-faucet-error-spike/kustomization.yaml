@@ -1,0 +1,13 @@
+# Gameday overlay: injects controlled errors for FaucetSLOBurnRateFast scenario.
+# Applied via: make gameday-on
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../apps/faucet/k8s
+  - loadgen-serviceaccount.yaml
+  - ../../scenarios/loadgen-pod.yaml
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: faucet

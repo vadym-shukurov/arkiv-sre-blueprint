@@ -1,0 +1,14 @@
+# Patches faucet deployment to inject ~20% errors (triggers burn-rate alert).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faucet
+  namespace: faucet
+spec:
+  template:
+    spec:
+      containers:
+        - name: faucet
+          env:
+            - name: FORCE_ERROR_RATE
+              value: "0.2"

@@ -1,0 +1,16 @@
+{{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-{{ base $path | trimSuffix ".json" }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: grafana
+  annotations:
+    k8s-sidecar-target-directory: "/tmp/dashboards/arkiv"
+data:
+  {{ base $path }}: |
+{{ $.Files.Get $path | nindent 4 }}
+---
+{{- end }}

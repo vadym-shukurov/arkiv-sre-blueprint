@@ -1,0 +1,2 @@
+# Dependencies are fetched by Argo CD / helm dep build
+charts/

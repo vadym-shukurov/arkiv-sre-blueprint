@@ -1,0 +1,183 @@
+# arkiv-platform-reference — kube-prometheus-stack values
+# SLOs, alerts, dashboards defined here and in alerts/
+kube-prometheus-stack:
+  fullnameOverride: observability
+  prometheus:
+    prometheusSpec:
+      storageSpec: {}
+      retention: 15d
+  grafana:
+    persistence:
+      enabled: false
+    admin:
+      existingSecret: grafana-admin
+      userKey: admin-user
+      passwordKey: admin-password
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        searchNamespace: monitoring
+  alertmanager:
+    alertmanagerSpec:
+      storage: {}
+  additionalPrometheusRulesMap:
+    slo-faucet:
+      groups:
+        - name: slo-faucet-recording
+          rules:
+            - record: slo:faucet:error_ratio_5m
+              expr: |
+                sum(rate(http_requests_total{namespace="faucet",status=~"5.."}[5m]))
+                / (sum(rate(http_requests_total{namespace="faucet"}[5m])) or vector(0.0001))
+            - record: slo:faucet:error_ratio_1h
+              expr: |
+                sum(rate(http_requests_total{namespace="faucet",status=~"5.."}[1h]))
+                / (sum(rate(http_requests_total{namespace="faucet"}[1h])) or vector(0.0001))
+            - record: slo:faucet:burn_rate_5m
+              expr: |
+                (slo:faucet:error_ratio_5m or vector(0)) / 0.001
+            - record: slo:faucet:burn_rate_1h
+              expr: |
+                (slo:faucet:error_ratio_1h or vector(0)) / 0.001
+            - record: slo:faucet:error_budget_remaining
+              expr: |
+                1 - (slo:faucet:error_ratio_1h or vector(0))
+        - name: slo-faucet-alerts
+          rules:
+            - alert: FaucetSLOBurnRateFast
+              expr: slo:faucet:burn_rate_5m > 14.4 and sum(rate(http_requests_total{namespace="faucet"}[5m])) > 0.01
+              for: 2m
+              labels:
+                severity: page
+                slo: faucet-availability
+              annotations:
+                summary: "Faucet error budget burning fast (14.4x in 5m) - page"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetSLOBurnRateFast.md"
+            - alert: FaucetSLOBurnRateSlow
+              expr: slo:faucet:burn_rate_1h > 6 and sum(rate(http_requests_total{namespace="faucet"}[1h])) > 0.01
+              for: 1h
+              labels:
+                severity: warning
+                slo: faucet-availability
+              annotations:
+                summary: "Faucet error budget burning slowly (6x in 1h) - ticket"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetSLOBurnRateSlow.md"
+            - alert: FaucetHighLatency
+              expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="faucet"}[5m])) by (le)) > 2
+              for: 5m
+              labels:
+                severity: warning
+                slo: faucet-latency
+              annotations:
+                summary: "Faucet p95 latency above 2s"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetHighLatency.md"
+            - alert: FaucetRateLimitSpike
+              expr: rate(faucet_rate_limit_total{namespace="faucet"}[5m]) > 1
+              for: 2m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Faucet rate limit hits spiking"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetRateLimitSpike.md"
+    slo-ingestion:
+      groups:
+        - name: slo-ingestion
+          rules:
+            - alert: IngestionHighErrorRate
+              expr: (sum(rate(http_requests_total{namespace="arkiv-ingestion",status=~"5.."}[5m])) / (sum(rate(http_requests_total{namespace="arkiv-ingestion"}[5m])) or vector(0.0001))) > 0.001 and sum(rate(http_requests_total{namespace="arkiv-ingestion"}[5m])) > 0.01
+              for: 5m
+              labels:
+                severity: warning
+                slo: ingestion-availability
+              annotations:
+                summary: "Arkiv ingestion HTTP 5xx rate above 0.1% (SLO breach)"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/IngestionHighErrorRate.md"
+            - alert: IngestionErrorSpike
+              expr: sum(rate(arkiv_ingest_total{namespace="arkiv-ingestion",status="error"}[5m])) > 0.01
+              for: 2m
+              labels:
+                severity: warning
+                slo: ingestion-availability
+              annotations:
+                summary: "Arkiv ingestion failing (stuck/backlog)"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/IngestionHighErrorRate.md"
+    slo-blockscout:
+      groups:
+        - name: slo-blockscout-recording
+          rules:
+            - record: slo:blockscout:error_ratio_5m
+              expr: |
+                sum(rate(http_requests_total{namespace="blockscout",status=~"5.."}[5m]))
+                / (sum(rate(http_requests_total{namespace="blockscout"}[5m])) or vector(0.0001))
+            - record: slo:blockscout:error_ratio_1h
+              expr: |
+                sum(rate(http_requests_total{namespace="blockscout",status=~"5.."}[1h]))
+                / (sum(rate(http_requests_total{namespace="blockscout"}[1h])) or vector(0.0001))
+            - record: slo:blockscout:burn_rate_5m
+              expr: |
+                (slo:blockscout:error_ratio_5m or vector(0)) / 0.001
+            - record: slo:blockscout:burn_rate_1h
+              expr: |
+                (slo:blockscout:error_ratio_1h or vector(0)) / 0.001
+            - record: slo:blockscout:error_budget_remaining
+              expr: |
+                1 - (slo:blockscout:error_ratio_1h or vector(0))
+        - name: slo-blockscout-alerts
+          rules:
+            - alert: BlockscoutSLOBurnRateFast
+              expr: slo:blockscout:burn_rate_5m > 14.4 and sum(rate(http_requests_total{namespace="blockscout"}[5m])) > 0.01
+              for: 2m
+              labels:
+                severity: page
+                slo: blockscout-availability
+              annotations:
+                summary: "Blockscout error budget burning fast (14.4x in 5m) - page"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
+            - alert: BlockscoutSLOBurnRateSlow
+              expr: slo:blockscout:burn_rate_1h > 6 and sum(rate(http_requests_total{namespace="blockscout"}[1h])) > 0.01
+              for: 1h
+              labels:
+                severity: warning
+                slo: blockscout-availability
+              annotations:
+                summary: "Blockscout error budget burning slowly (6x in 1h) - ticket"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
+            - alert: BlockscoutHighErrorRate
+              expr: (sum(rate(http_requests_total{namespace="blockscout",status=~"5.."}[5m])) / (sum(rate(http_requests_total{namespace="blockscout"}[5m])) or vector(0.0001))) > 0.001 and sum(rate(http_requests_total{namespace="blockscout"}[5m])) > 0.01
+              for: 5m
+              labels:
+                severity: warning
+                slo: blockscout-availability
+              annotations:
+                summary: "Blockscout API error rate above 0.1% (SLO 99.9% breach)"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
+    infra:
+      groups:
+        - name: infra
+          rules:
+            - alert: NodeNotReady
+              expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+              for: 5m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Node {{ $labels.node }} is not Ready"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/NodeNotReady.md"
+            - alert: HighPodRestartRate
+              expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Pod {{ $labels.pod }} in {{ $labels.namespace }} restarting frequently"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/HighPodRestartRate.md"
+            - alert: PrometheusDown
+              expr: absent(up{job=~"prometheus|observability-kube-prometheus-prometheus"} == 1)
+              for: 2m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Prometheus is down (observability failure)"
+                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/PrometheusDown.md"

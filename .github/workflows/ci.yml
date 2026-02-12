@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        run: |
+          curl -sL https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_linux_amd64.tar.gz | tar xz
+          chmod +x gitleaks && ./gitleaks git . --config .gitleaks.toml --verbose
+
+      - name: Lint YAML
+        run: |
+          pip install yamllint
+          yamllint -c .yamllint .
+
+      - name: Validate ApplicationSet and faucet app
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          chmod +x kubeconform && sudo mv kubeconform /usr/local/bin/
+          sed -e 's|REPO_URL_PLACEHOLDER|https://github.com/arkiv/arkiv-platform-reference|g' infra/k8s/argocd/application-set.yaml | kubeconform -output text -kubernetes-version 1.28 -strict -ignore-missing-schemas
+          sed -e 's|REPO_URL_PLACEHOLDER|https://github.com/arkiv/arkiv-platform-reference|g' infra/k8s/argocd/application-faucet.yaml | kubeconform -output text -kubernetes-version 1.28 -strict -ignore-missing-schemas
+      - name: Kustomize build (gameday overlay)
+        run: kubectl kustomize gameday/overlays/01-faucet-error-spike > /dev/null
+
+      - name: Helm lint
+        run: |
+          curl -s https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm dependency update infra/k8s/monitoring && helm dependency update apps/blockscout
+          helm lint infra/k8s/monitoring && helm lint apps/blockscout
+
+      - name: Docker build
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/faucet
+          push: false
+          load: true
+
+      - name: Docker build ingestion
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/arkiv-ingestion
+          push: false
+          load: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Go vet and test
+        run: |
+          cd apps/faucet && go mod tidy && go vet ./... && go test ./...
+          cd ../arkiv-ingestion && go mod tidy && go vet ./... && go test ./...

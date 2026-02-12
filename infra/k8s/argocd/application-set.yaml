@@ -1,0 +1,76 @@
+# ApplicationSet: REPO_URL_PLACEHOLDER replaced by Makefile. Secrets path fixed to dev.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - app: secrets
+            repoURL: REPO_URL_PLACEHOLDER
+            path: infra/k8s/secrets/dev
+            destNamespace: argocd
+            syncWave: "-1"
+          - app: observability
+            repoURL: REPO_URL_PLACEHOLDER
+            path: infra/k8s/monitoring
+            destNamespace: monitoring
+            helmRelease: observability
+          - app: ingress
+            repoURL: https://kubernetes.github.io/ingress-nginx
+            chart: ingress-nginx
+            targetRevision: "4.12.0"
+            destNamespace: ingress-nginx
+            helmRelease: ingress-nginx
+            helmValues: |
+              controller:
+                hostPort:
+                  enabled: true
+              service:
+                type: NodePort
+          - app: blockscout
+            repoURL: REPO_URL_PLACEHOLDER
+            path: apps/blockscout
+            destNamespace: blockscout
+            helmRelease: blockscout
+          - app: arkiv-ingestion
+            repoURL: REPO_URL_PLACEHOLDER
+            path: apps/arkiv-ingestion/k8s
+            destNamespace: arkiv-ingestion
+  template:
+    metadata:
+      name: '{{ .app }}'
+      {{- if .syncWave }}
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{ .syncWave }}"
+      {{- end }}
+    spec:
+      project: default
+      source:
+        repoURL: '{{ .repoURL }}'
+        targetRevision: '{{ default "HEAD" .targetRevision }}'
+        {{- if .path }}
+        path: '{{ .path }}'
+        {{- end }}
+        {{- if .chart }}
+        chart: '{{ .chart }}'
+        {{- end }}
+        {{- if or .helmRelease .helmValues }}
+        helm:
+          releaseName: '{{ default .app .helmRelease }}'
+          {{- if .helmValues }}
+          values: |
+            {{ .helmValues | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ .destNamespace }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

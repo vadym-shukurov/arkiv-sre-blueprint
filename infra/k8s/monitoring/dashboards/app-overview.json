@@ -1,0 +1,49 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "targets": [{"expr": "sum(rate(http_requests_total{namespace=~\"faucet|blockscout|arkiv-ingestion\"}[5m])) by (namespace, status)", "legendFormat": "{{namespace}} {{status}}", "refId": "A"}],
+      "title": "Faucet / Blockscout / Ingestion - Request rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "targets": [{"expr": "sum(rate(http_requests_total{namespace=~\"faucet|blockscout|arkiv-ingestion\",status=~\"5..\"}[5m])) by (namespace) / sum(rate(http_requests_total{namespace=~\"faucet|blockscout|arkiv-ingestion\"}[5m])) by (namespace) * 100", "legendFormat": "{{namespace}}", "refId": "A"}],
+      "title": "Error rate % by app",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=~\"faucet|blockscout|arkiv-ingestion\"}[5m])) by (namespace, le))", "legendFormat": "{{namespace}} p95", "refId": "A"}],
+      "title": "p95 latency by app",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["apps", "faucet", "blockscout", "ingestion"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "App Overview (Faucet, Blockscout, Arkiv Ingestion)",
+  "uid": "app-overview",
+  "version": 1
+}

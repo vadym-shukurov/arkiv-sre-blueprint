@@ -1,0 +1,11 @@
+extends: default
+rules:
+  line-length:
+    max: 160
+    allow-non-breakable-inline-mappings: true
+  document-start: disable
+ignore:
+  - "*.json"
+  - "*.enc.yaml"
+  - "node_modules"
+  - ".git"
