@@ -1,4 +1,4 @@
-// Faucet: HTTP API for test tokens. Rate-limited by IP and address.
+// Faucet: HTTP API for test tokens. Rate-limited by IP (10/min) and address (2/hr).
 // Endpoints: POST /faucet (JSON body: address), GET /healthz, GET /metrics.
 package main
 

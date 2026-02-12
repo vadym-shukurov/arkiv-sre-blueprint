@@ -4,26 +4,33 @@ ARGOCD_NS ?= argocd
 REPO_URL ?= https://github.com/vadym-shukurov/arkiv-sre-blueprint
 AGE_KEY_FILE ?= infra/k8s/secrets/dev/age.agekey
 
-.PHONY: up down status logs port-forward faucet-build ingestion-build secrets-init secrets-scan gameday-on gameday-off ci-local help create-cluster install-argocd configure-argocd-ksops bootstrap
+.PHONY: up down status logs port-forward pf-argocd pf-grafana pf-faucet pf-ingestion pf-blockscout faucet-build ingestion-build app-build secrets-init secrets-dev secrets-scan gameday-on gameday-off ci-local help create-cluster install-argocd configure-argocd-ksops bootstrap
 .DEFAULT_GOAL := help
 
 help:
-	@echo "make up               Create cluster + Argo CD + bootstrap ApplicationSet (REPO_URL)"
+	@echo "make up               Create cluster + app builds + Argo CD + bootstrap (REPO_URL)"
 	@echo "make down             Delete cluster"
 	@echo "make status           Cluster, Argo apps, pods"
 	@echo "make logs             Tail Argo CD logs (COMPONENT=server|repo-server)"
 	@echo "make port-forward     Argo CD @ https://localhost:8080"
-	@echo "make faucet-build     Build faucet image and load into kind"
-	@echo "make ingestion-build  Build arkiv-ingestion image and load into kind"
-	@echo "make secrets-init     Generate age key, encrypt secrets (run once)"
+	@echo "make pf-grafana       Grafana @ :3000"
+	@echo "make pf-faucet        Faucet @ :8081"
+	@echo "make pf-ingestion     Arkiv-ingestion @ :8082"
+	@echo "make pf-blockscout    Blockscout @ :8080"
+	@echo "make faucet-build     Build and load faucet image"
+	@echo "make ingestion-build  Build and load arkiv-ingestion image"
+	@echo "make secrets-init     Encrypt secrets → *.enc.yaml"
+	@echo "make secrets-dev      Generate random dev values (run before secrets-init)"
 	@echo "make secrets-scan     Scan repo for secrets (gitleaks)"
 	@echo "make gameday-on       Enable gameday overlay"
 	@echo "make gameday-off      Revert faucet to normal path"
 	@echo "make ci-local         Run CI locally"
 
-up: create-cluster configure-argocd-ksops bootstrap
+up: create-cluster app-build configure-argocd-ksops bootstrap
 	@echo ">>> Waiting for Argo apps to sync..."
 	@$(MAKE) wait-sync
+
+app-build: faucet-build ingestion-build
 
 create-cluster:
 	@if ! kind get clusters 2>/dev/null | grep -q "^$(CLUSTER_NAME)$$"; then \
@@ -59,6 +66,9 @@ bootstrap:
 secrets-init:
 	@./scripts/secrets-init.sh
 
+secrets-dev:
+	@bash scripts/secrets-dev.sh
+
 secrets-scan:
 	@command -v gitleaks >/dev/null 2>&1 || { echo "Install gitleaks: brew install gitleaks"; exit 1; }
 	gitleaks git --config .gitleaks.toml --verbose .
@@ -84,8 +94,17 @@ status:
 logs:
 	@c=$${COMPONENT:-server}; kubectl logs -n $(ARGOCD_NS) deployment/argocd-$$c -f --tail=50
 
-port-forward:
+port-forward: pf-argocd
+pf-argocd:
 	kubectl port-forward -n $(ARGOCD_NS) svc/argocd-server 8080:443
+pf-grafana:
+	kubectl port-forward -n monitoring svc/observability-grafana 3000:80
+pf-faucet:
+	kubectl port-forward -n faucet svc/faucet 8081:80
+pf-ingestion:
+	kubectl port-forward -n arkiv-ingestion svc/arkiv-ingestion 8082:80
+pf-blockscout:
+	kubectl port-forward -n blockscout svc/blockscout-blockscout-stack-frontend-svc 8080:80
 
 faucet-build:
 	docker build -t faucet:latest apps/faucet

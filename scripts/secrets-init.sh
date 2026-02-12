@@ -19,7 +19,9 @@ mv infra/k8s/secrets/.sops.yaml.tmp infra/k8s/secrets/.sops.yaml
 
 cd "$DEV"
 for f in grafana-admin blockscout-postgres blockscout-app arkiv-ingestion-db; do
-  sops -e "$f.secret.yaml.example" > "$f.enc.yaml"
+  src="$f.secret.yaml"
+  [[ -f "$src" ]] || src="$f.secret.yaml.example"
+  sops -e "$src" > "$f.enc.yaml"
 done
 
 echo "Done. export SOPS_AGE_KEY=\$(cat $KEY) && make up"

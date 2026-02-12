@@ -4,7 +4,7 @@ Template files use placeholders (`CHANGE_ME`, `REDACTED`). Do not commit real se
 
 ## Main path: K8s (`make up`)
 
-1. Edit `infra/k8s/secrets/dev/*.secret.yaml.example` and replace each `CHANGE_ME` with real values (or `admin`/`postgres` for local dev).
+1. Run `make secrets-dev` (generates .secret.yaml from templates; gitignored) or edit `*.secret.yaml.example` and replace `CHANGE_ME` manually.
 2. Run:
 
 ```bash

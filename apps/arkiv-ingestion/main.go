@@ -1,5 +1,5 @@
-// Arkiv-ingestion: Fetches chain data and ingests into Postgres.
-// Uses synthetic fetcher (no RPC). Endpoints: GET /healthz, GET /metrics.
+// Arkiv-ingestion: Fetches chain data, ingests into Postgres. Uses synthetic fetcher (no RPC).
+// Endpoints: GET /healthz, GET /metrics. Idempotent via ON CONFLICT DO NOTHING.
 package main
 
 import (
