@@ -167,7 +167,7 @@ All 9 runbooks exist: FaucetSLOBurnRateFast/Slow, FaucetHighLatency, FaucetRateL
 | Postmortem template | PASS | `gameday/templates/postmortem.md` |
 | Example filled | PASS | `gameday/postmortems/faucet-error-spike-sample.md` |
 
-**Evidence:** `kubectl kustomize gameday/overlays/01-faucet-error-spike` — kustomization references `../../scenarios/loadgen-pod.yaml` (valid path).
+**Evidence:** `kubectl kustomize gameday/overlays/01-faucet-error-spike` — overlay includes loadgen-pod.yaml.
 
 ---
 

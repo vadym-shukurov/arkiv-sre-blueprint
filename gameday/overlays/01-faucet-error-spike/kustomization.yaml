@@ -5,7 +5,7 @@ kind: Kustomization
 resources:
   - ../../../apps/faucet/k8s
   - loadgen-serviceaccount.yaml
-  - ../../scenarios/loadgen-pod.yaml
+  - loadgen-pod.yaml
 patches:
   - path: deployment-patch.yaml
     target:
