@@ -54,7 +54,7 @@ kube-prometheus-stack:
                 slo: faucet-availability
               annotations:
                 summary: "Faucet error budget burning fast (14.4x in 5m) - page"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetSLOBurnRateFast.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/FaucetSLOBurnRateFast.md"
             - alert: FaucetSLOBurnRateSlow
               expr: slo:faucet:burn_rate_1h > 6 and sum(rate(http_requests_total{namespace="faucet"}[1h])) > 0.01
               for: 1h
@@ -63,7 +63,7 @@ kube-prometheus-stack:
                 slo: faucet-availability
               annotations:
                 summary: "Faucet error budget burning slowly (6x in 1h) - ticket"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetSLOBurnRateSlow.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/FaucetSLOBurnRateSlow.md"
             - alert: FaucetHighLatency
               expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="faucet"}[5m])) by (le)) > 2
               for: 5m
@@ -72,7 +72,7 @@ kube-prometheus-stack:
                 slo: faucet-latency
               annotations:
                 summary: "Faucet p95 latency above 2s"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetHighLatency.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/FaucetHighLatency.md"
             - alert: FaucetRateLimitSpike
               expr: rate(faucet_rate_limit_total{namespace="faucet"}[5m]) > 1
               for: 2m
@@ -80,7 +80,7 @@ kube-prometheus-stack:
                 severity: warning
               annotations:
                 summary: "Faucet rate limit hits spiking"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/FaucetRateLimitSpike.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/FaucetRateLimitSpike.md"
     slo-ingestion:
       groups:
         - name: slo-ingestion
@@ -93,7 +93,7 @@ kube-prometheus-stack:
                 slo: ingestion-availability
               annotations:
                 summary: "Arkiv ingestion HTTP 5xx rate above 0.1% (SLO breach)"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/IngestionHighErrorRate.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/IngestionHighErrorRate.md"
             - alert: IngestionErrorSpike
               expr: sum(rate(arkiv_ingest_total{namespace="arkiv-ingestion",status="error"}[5m])) > 0.01
               for: 2m
@@ -102,7 +102,7 @@ kube-prometheus-stack:
                 slo: ingestion-availability
               annotations:
                 summary: "Arkiv ingestion failing (stuck/backlog)"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/IngestionHighErrorRate.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/IngestionHighErrorRate.md"
     slo-blockscout:
       groups:
         - name: slo-blockscout-recording
@@ -134,7 +134,7 @@ kube-prometheus-stack:
                 slo: blockscout-availability
               annotations:
                 summary: "Blockscout error budget burning fast (14.4x in 5m) - page"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
             - alert: BlockscoutSLOBurnRateSlow
               expr: slo:blockscout:burn_rate_1h > 6 and sum(rate(http_requests_total{namespace="blockscout"}[1h])) > 0.01
               for: 1h
@@ -143,7 +143,7 @@ kube-prometheus-stack:
                 slo: blockscout-availability
               annotations:
                 summary: "Blockscout error budget burning slowly (6x in 1h) - ticket"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
             - alert: BlockscoutHighErrorRate
               expr: (sum(rate(http_requests_total{namespace="blockscout",status=~"5.."}[5m])) / (sum(rate(http_requests_total{namespace="blockscout"}[5m])) or vector(0.0001))) > 0.001 and sum(rate(http_requests_total{namespace="blockscout"}[5m])) > 0.01
               for: 5m
@@ -152,7 +152,7 @@ kube-prometheus-stack:
                 slo: blockscout-availability
               annotations:
                 summary: "Blockscout API error rate above 0.1% (SLO 99.9% breach)"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
     infra:
       groups:
         - name: infra
@@ -164,7 +164,7 @@ kube-prometheus-stack:
                 severity: critical
               annotations:
                 summary: "Node {{ $labels.node }} is not Ready"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/NodeNotReady.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/NodeNotReady.md"
             - alert: HighPodRestartRate
               expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
               for: 5m
@@ -172,7 +172,7 @@ kube-prometheus-stack:
                 severity: warning
               annotations:
                 summary: "Pod {{ $labels.pod }} in {{ $labels.namespace }} restarting frequently"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/HighPodRestartRate.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/HighPodRestartRate.md"
             - alert: PrometheusDown
               expr: absent(up{job=~"prometheus|observability-kube-prometheus-prometheus"} == 1)
               for: 2m
@@ -180,4 +180,4 @@ kube-prometheus-stack:
                 severity: critical
               annotations:
                 summary: "Prometheus is down (observability failure)"
-                runbook_url: "https://github.com/arkiv/arkiv-platform-reference/blob/main/docs/runbooks/PrometheusDown.md"
+                runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/PrometheusDown.md"

@@ -1,7 +1,7 @@
 # arkiv-platform-reference — make up | make down
 CLUSTER_NAME ?= arkiv-platform
 ARGOCD_NS ?= argocd
-REPO_URL ?= https://github.com/arkiv/arkiv-platform-reference
+REPO_URL ?= https://github.com/vadym-shukurov/arkiv-sre-blueprint
 AGE_KEY_FILE ?= infra/k8s/secrets/dev/age.agekey
 
 .PHONY: up down status logs port-forward faucet-build ingestion-build secrets-init secrets-scan gameday-on gameday-off ci-local help create-cluster install-argocd configure-argocd-ksops bootstrap

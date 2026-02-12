@@ -1,6 +1,6 @@
-# arkiv-platform-reference
+# arkiv-sre-blueprint
 
-[![CI](https://github.com/arkiv/arkiv-platform-reference/actions/workflows/ci.yml/badge.svg)](https://github.com/arkiv/arkiv-platform-reference/actions/workflows/ci.yml)
+[![CI](https://github.com/vadym-shukurov/arkiv-sre-blueprint/actions/workflows/ci.yml/badge.svg)](https://github.com/vadym-shukurov/arkiv-sre-blueprint/actions/workflows/ci.yml)
 
 Platform reference stack. Run locally on **kind**: `make up`. Teardown: `make down`.
 
@@ -25,7 +25,7 @@ make secrets-init
 export SOPS_AGE_KEY=$(cat infra/k8s/secrets/dev/age.agekey)
 # 3. Commit enc.yaml and push (Argo syncs secrets from repo)
 git add infra/k8s/secrets/dev/*.enc.yaml && git commit -m "Add encrypted secrets" || true
-git push <remote> main
+git push origin main
 # 4. Bring up cluster
 make up
 make faucet-build
@@ -89,7 +89,7 @@ gameday/           # chaos scenarios, postmortem template
 
 ## REPO_URL
 
-Push to a Git remote before `make up` (Argo syncs from REPO_URL). Override: `REPO_URL=https://github.com/your-org/repo make up`. If forked, update `runbook_url` in `infra/k8s/monitoring/values.yaml` (grep for arkiv-platform-reference).
+Push to a Git remote before `make up` (Argo syncs from REPO_URL). Default: `https://github.com/vadym-shukurov/arkiv-sre-blueprint`. Override: `REPO_URL=https://github.com/your-org/repo make up`. If forked, update `runbook_url` in `infra/k8s/monitoring/values.yaml` (grep for arkiv-platform-reference).
 
 **Prerequisites for `make ci-local`:** `brew install yamllint kubeconform gitleaks helm` (in addition to kind, kubectl, make, sops, age).
 
@@ -105,7 +105,7 @@ Placeholders (`REDACTED`, `CHANGE_ME`) are allowlisted in `.gitleaks.toml`. See 
 
 ## Evidence / Production Readiness
 
-Audit: [docs/RELEASE-CANDIDATE-AUDIT.md](docs/RELEASE-CANDIDATE-AUDIT.md) | [docs/PRODUCTION-READINESS-AUDIT.md](docs/PRODUCTION-READINESS-AUDIT.md)
+Audit: [docs/RELEASE-CANDIDATE-AUDIT.md](docs/RELEASE-CANDIDATE-AUDIT.md) | [docs/PRODUCTION-READINESS-AUDIT.md](docs/PRODUCTION-READINESS-AUDIT.md) | QE: [docs/RELEASE-CANDIDATE-QE.md](docs/RELEASE-CANDIDATE-QE.md)
 
 **Evidence screenshots:** (1) Argo CD UI — all apps Synced/Healthy; (2) Grafana SLO Dashboard — Faucet burn rate panels; (3) Prometheus Alerts with runbook links; (4) `curl localhost:8081/healthz` → ok; (5) GameDay: burn rate before/after gameday-off.
 
