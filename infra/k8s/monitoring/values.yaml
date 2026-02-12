@@ -87,7 +87,9 @@ kube-prometheus-stack:
           rules:
             - alert: IngestionHighErrorRate
               expr: |
-                (sum(rate(http_requests_total{namespace="arkiv-ingestion",status=~"5.."}[5m])) / (sum(rate(http_requests_total{namespace="arkiv-ingestion"}[5m])) or vector(0.0001))) > 0.001 and sum(rate(http_requests_total{namespace="arkiv-ingestion"}[5m])) > 0.01
+                (sum(rate(http_requests_total{namespace="arkiv-ingestion",status=~"5.."}[5m]))
+                  / (sum(rate(http_requests_total{namespace="arkiv-ingestion"}[5m])) or vector(0.0001)))
+                > 0.001 and sum(rate(http_requests_total{namespace="arkiv-ingestion"}[5m])) > 0.01
               for: 5m
               labels:
                 severity: warning
@@ -147,7 +149,9 @@ kube-prometheus-stack:
                 runbook_url: "https://github.com/vadym-shukurov/arkiv-sre-blueprint/blob/main/docs/runbooks/BlockscoutHighErrorRate.md"
             - alert: BlockscoutHighErrorRate
               expr: |
-                (sum(rate(http_requests_total{namespace="blockscout",status=~"5.."}[5m])) / (sum(rate(http_requests_total{namespace="blockscout"}[5m])) or vector(0.0001))) > 0.001 and sum(rate(http_requests_total{namespace="blockscout"}[5m])) > 0.01
+                (sum(rate(http_requests_total{namespace="blockscout",status=~"5.."}[5m]))
+                  / (sum(rate(http_requests_total{namespace="blockscout"}[5m])) or vector(0.0001)))
+                > 0.001 and sum(rate(http_requests_total{namespace="blockscout"}[5m])) > 0.01
               for: 5m
               labels:
                 severity: warning
