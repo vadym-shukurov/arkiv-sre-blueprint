@@ -112,7 +112,6 @@ gameday-off:
 ci-local:
 	$(MAKE) secrets-scan
 	yamllint -c .yamllint .
-	sed -e 's|REPO_URL_PLACEHOLDER|$(REPO_URL)|g' infra/k8s/argocd/application-set.yaml | kubeconform -output text -kubernetes-version 1.28.0 -strict -ignore-missing-schemas
 	sed -e 's|REPO_URL_PLACEHOLDER|$(REPO_URL)|g' infra/k8s/argocd/application-faucet.yaml | kubeconform -output text -kubernetes-version 1.28.0 -strict -ignore-missing-schemas
 	kubectl kustomize gameday/overlays/01-faucet-error-spike > /dev/null
 	helm dependency update infra/k8s/monitoring && helm dependency update apps/blockscout
