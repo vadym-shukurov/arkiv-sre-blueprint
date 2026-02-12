@@ -31,9 +31,9 @@ jobs:
           chmod +x kubeconform && sudo mv kubeconform /usr/local/bin/
           REPO_URL="https://github.com/arkiv/arkiv-platform-reference"
           sed -e "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" infra/k8s/argocd/application-set.yaml \
-            | kubeconform -output text -kubernetes-version 1.28 -strict -ignore-missing-schemas
+            | kubeconform -output text -kubernetes-version 1.28.0 -strict -ignore-missing-schemas
           sed -e "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" infra/k8s/argocd/application-faucet.yaml \
-            | kubeconform -output text -kubernetes-version 1.28 -strict -ignore-missing-schemas
+            | kubeconform -output text -kubernetes-version 1.28.0 -strict -ignore-missing-schemas
       - name: Kustomize build (gameday overlay)
         run: kubectl kustomize gameday/overlays/01-faucet-error-spike > /dev/null
 
