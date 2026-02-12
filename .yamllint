@@ -9,3 +9,4 @@ ignore:
   - "*.enc.yaml"
   - "node_modules"
   - ".git"
+  - "**/templates/*.yaml"
